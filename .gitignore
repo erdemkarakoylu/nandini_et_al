@@ -3,3 +3,12 @@
 *.csv
 *.xlsx
 *.png
+*.html
+*.tex
+*.min.*
+*.css
+*.woff
+*.js
+*.log
+*.nc
+*.pyc
