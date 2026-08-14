@@ -1,6 +1,6 @@
 ---
-title: "Replacing Hypothesis Testing with Effect Estimation"
-subtitle: "A Principled Bayesian Causal Approach"
+title: "Forget NHST - Estimate Effects Instead!"
+subtitle: "Part I:  Controlled Experiments "
 author:
   - name: "Erdem M Karaköylü"
     email: erdemk@protonmail.com
@@ -13,7 +13,9 @@ abstract: |
   [placeholder]
 keywords: [effect estimation, functional response, causal inference, Bayesian measurement error]
 
-
+project:
+  type: default
+  output-dir: output
 format:
   html:
     toc: true
@@ -43,143 +45,10 @@ bibliography: references.bib
 link-citations: true
 ---
 
+{{< include ./introduction.qmd >}}
 
+{{< include ./methods.qmd >}}
 
-## Methods
+{{< include results.qmd >}}
 
-### Data and study system
-
-I reanalyze the functional-response experiment of [@nandini2026], who quantified prey removal by the colonial euryhaline hydroid *Cordylophora caspia* (Cnidaria: Hydrozoa). A single polyp (~1 week old) was offered one of three zooplankton prey — the cyclopoid copepod *Apocyclops panamensis*, the harpacticoid copepod *Nitokra lacustris*, or the rotifer *Brachionus plicatilis* — at each of three salinities (10, 20, and 30 $g\,L^{-1}$) across a graded series of prey densities, and allowed to feed for 2 h at $25^{\circ}C$. The response is the number of prey removed (initial minus final count); for this surplus-killing predator this represents prey killed rather than necessarily ingested. Each datum is the mean and standard error of removal across four replicates. Raw replicate counts were not available, so I condition on each cell mean and its standard error as the observed value and its known measurement scale (@sec-stat-mdl). Observations are indexed by prey $i \in \{1, 2, 3\}$, salinity $j \in \{1, 2, 3\}$, and density level $k$, with $N_{0,ijk}$ the offered density, $\bar{y}_{ijk}$ the mean of prey removed, and $se_{ijk}$ the standard error of prey removed.
-
-
-### Causal model
-
-We begin from a causal graph of the experiment rather than a regression specification (@fig-causal-dag, left group), following the graph-based approach to inference and measurement (e.g. @mcelreath2020). Salinity, prey type, and prey density are set by the experimenter. As such these are considered intervened upon. Thus no arrows enter these nodes and their effects on downstream quantities are identified as causal by design. This licenses a causal reading of the estimated contrasts without covariate adjustment; no backdoor, front-door, or instrumental variable machinery is required.
-
-![Causal and statistical structure of the model. The left cluster is the causal model (design variables, unobserved osmotic-state mediators); the right cluster is the statistical model (M1). Attack rate (α) and handling time (*h*) bridge the two. Dashed nodes are unobserved or latent; solid nodes are observed or experimentally set.](../figures/m1_dag.png){#fig-causal-dag}
-
-Feeding is summarized by two latent parameters of the Holling type II functional response [@holling1959]: the *attack rate* (the low-density capture fraction) and the *handling time* (whose reciprocal is the asymptotic maximum removal). Type II responses are typical of cnidarian planktivores, including e.g. the cold-water coral *Desmophyllum dianthus* [@hofer2018], and were reported for *C. caspia* in the source study. We take these two parameters as the causal targets because comparative attack-rate/handling-time analysis is a standard basis for predicting the impact of invasive predators [@dick2014].
-
-Prey identity affects both parameters directly through morphology. Size, escape speed and exoskeletal armoring govern capture and processing. *Cordylophora* captures prey by nematocyst discharge following chemoreception of prey-derived cues [@fulton1963]. Salinity reaches the two parameters only indirectly, through unobserved osmotic states of the prey and of the predator [@folinororem2018], and through the salinity dependence of *C. caspia* nematocysts, which cease to function in freshwater [@fulton1963]. Because both mediating states are unmeasured, the model identifies the total effect of salinity on each parameter but cannot separate its prey-mediated from its predator-mediated component. I therefore report total salinity effects and treat the mechanistic decomposition as beyond the data. Finally, because prey type and salinity share a common mediator (prey osmotic state), their effects on the two parameters are expected to be non-additive. This is encoded structurally as a prey-by-salinity interaction, consistent with the significant interaction on prey numbers reported by @nandini2026.
-
-### Statistical model {#sec-stat-mdl}
-
-The statistical model (@fig-causal-dag, right group) makes the causal structure estimable while respecting three constraints known before these data are seen: the attack rate is a fraction bounded, $\in (0,1)$, the handling time is strictly positive, and the expected removal cannot exceed the prey offered. I model attack rate on the logit scale and handling time on the log scale. Doing so enforces the first two constraints and makes the third hold for the expected removal by construction. Each distribution introduced below is chosen for what it must represent given these constraints and background knowledge alone; whether the resulting predictions are plausible is then checked by simulating from the model before it is conditioned on any data (@sec-inference).
-
-For prey $i$ and salinity $j$, the attack rate $\alpha_{ij}$ and handling time $h_{ij}$ are 
-
-$$ logit(\alpha_{ij}) = a_0 + u_i^a + v_j^a + w_{ij}^a$${#eq-attack}
-
-$$log(h_{ij}) = h_0 + u_i^h + v_j^h + w_{ij}^h$${#eq-handling}
-
-where $a_0$, $h_0$ are grand means and $u$, $v$, $w$ are respectively prey main effects, salinity main effects, and their interaction. Each effect is given a zero-sum (ZeroSumNormal) prior: every level's deviation is drawn from the same prior and the deviations are constrained to sum to zero, $\sum_i u_i = \sum_j v_j = 0$ for main effects and $\sum_i w_{ij} = \sum_j w_{ij} = 0$ for the interaction. No prey type or salinity level is treated as a reference — unlike a contrast against a fixed baseline level, no level's deviation is fixed at zero, and only their sum is constrained, not their relative sizes. Both $\alpha$ and $h$ carry the same {intercept, prey, salinity, interaction} structure because the causal graph routes them through the same mediators.
-
-Expected removal follows Holling's disc equation,
-
-$$\mu_{ijk} = \frac{\alpha_{ij} N_{0,ijk}}{1+\alpha_{ij}h_{ij}N_{0,ijk}}$${#eq-holling}
-
-with $\mu \rightarrow \alpha_{ij} N_0$ as $N_0 \rightarrow 0$ (capture-limited) and $\mu \rightarrow A_{ij} \equiv 1 / h_{ij}$ as $N_0 \rightarrow \infty$ (handling-limited); since $\alpha_{ij} \in (0, 1)$ and the denominator $\geq 1$, $\mu_{ijk} < N_{0,ijk}$ throughout.
-
-Unlike the textbook disc equation, where $\alpha$ carries units of area/time and $h$ of time/prey and $\mu$ is a rate, no explicit time variable appears here: assay duration is fixed at 2 h, so it is absorbed into both parameters. $\alpha$ is accordingly a dimensionless fraction (of prey offered, captured within the assay) and $h$ has units of prey$^{-1}$, with $1/h_{ij}$ the maximum count consumable in that fixed window rather than a time-normalized rate. Estimates are therefore specific to the 2 h assay and not directly comparable to attack rate or handling time reported in time-explicit units elsewhere.
-
-The cell mean is linked to $\mu$ by two sources of noise: a process term $\tau$, the departure of the smooth curve from the true cell mean, and the known sampling error $se_{ijk}$, the precision of the four-replicate mean. Assuming these are independent, their variances add,
-
-$$\sigma_{\text{eff},ijk} = \sqrt{\tau^2 + se_{ijk}^2}$${#eq-sigma-eff}
-
-which is supplied as the scale of a gamma likelihood on the observed cell mean,
-
-$$\bar{y}_{ijk} \sim \text{Gamma}\left(\text{mean}=\mu_{ijk}, \ \text{sd}=\sigma_{\text{eff},ijk}\right)$${#eq-likelihood}
-
-A gamma is used rather than a normal because removal counts are positive and several rotifer cells sit close to zero, where a normal or truncated normal would place mass on impossible values or bias the mean upward; the gamma keeps $E[\bar{y}_{ijk}] = \mu_{ijk}$ exactly while allowing the right skew those low cells show. Conditioning on $se_{ijk}$ as known, rather than treating it as itself uncertain, is the point at which I use the reported summary statistics rather than the unavailable raw replicate counts.
-
-### Prior specification {#sec-priors}
-
-Priors are elicited on interpretable quantities — capture fractions, maximum consumption, fold-differences between levels — rather than on coefficient scales, where intuition does not transfer. Each claim is stated as an interval with a probability and mapped to the maximum-entropy distribution consistent with that claim: the least committal distribution given only the stated information. Every prior was then audited in outcome space (a capture fraction via the inverse logit; an asymptote via the exponential and its reciprocal) to confirm the encoded distribution matched the stated claim, and checked jointly by simulating from the model before it saw any data (@sec-inference).
-
-Two devices structure the effect priors. First, for a zero-sum-constrained effect with scale $\sigma$, any pairwise contrast between levels has standard deviation $\sigma\sqrt{2}$ regardless of the number of levels, so a pre-data belief of the form "two levels differ by up to $R$-fold" maps directly to $\sigma = \ln(R) / (1.96\sqrt{2})$. This keeps the elicited quantity a fold-change on a biologically meaningful scale rather than an abstract coefficient width. Second, salinity effects are given tighter priors than prey effects on both $\alpha$ and $h$: *C. caspia* and all three prey tolerate a wide salinity range and the tested 10–30 g $L^{-1}$ sits well inside that tolerance [@folinororem2018; @nandini2026], so salinity is expected a priori to shift capture and handling less than prey identity does.
-
-Two priors are deliberately not literature-anchored. The grand-mean capture fraction $a_0$ is elicited from ignorance rather than from a literature value: no study reports a single capture fraction for this predator, and inventing one would be false precision. It is instead given a median of 0.5 with 95% mass within (0.05, 0.95) — the maximum-entropy statement that the quantity is a fraction and could plausibly lie anywhere within it. The grand-mean handling time $h_0$ is anchored to a transparent order-of-magnitude heuristic rather than tightened against a related study: handling a small zooplankter plausibly takes minutes, which over a 2 h assay caps processing at the order of tens of prey. The nearest related-cnidarian measurement, *Hydra* predation on cladocerans [@riveradelaparra2016], is only loosely commensurate with the present system — a solitary freshwater polyp rather than a colonial euryhaline hydroid, cladoceran rather than copepod/rotifer prey, a demographic rather than a functional-response assay, and (@sec-stat-mdl) a fixed-duration count rather than a time-normalized rate — and so is treated as corroborating the order of magnitude only, not as grounds for a narrower prior. $h_0$ is accordingly kept broad, with plausibility of the implied consumption checked by prior predictive simulation rather than by tightening.
-
-| Parameter | Distribution | Interpretable claim |
-|---|---|---|
-| $a_0$ | $\text{Normal}(0,\ 1.50)$ | capture fraction: median 0.5, 95% within (0.05, 0.95) — ignorance |
-| $h_0$ | $\text{Normal}(\ln(1/40),\ 0.74)$ | asymptote $1/h$: 95% within (10, 180) prey — order-of-magnitude heuristic |
-| $u^a$ (prey) | $\text{ZeroSumNormal}(0.70)$ | prey differ up to $\sim$7-fold in capture odds |
-| $v^a$ (salinity) | $\text{ZeroSumNormal}(0.40)$ | salinity shifts capture odds up to $\sim$3-fold (tighter: in-tolerance) |
-| $w^a$ (interaction) | $\text{ZeroSumNormal}(0.35)$ | interaction $\approx$ half a main effect (lean toward additivity) |
-| $u^h$ (prey) | $\text{ZeroSumNormal}(0.50)$ | prey differ up to $\sim$4-fold in handling time |
-| $v^h$ (salinity) | $\text{ZeroSumNormal}(0.30)$ | salinity shifts handling up to $\sim$2.3-fold (tighter) |
-| $w^h$ (interaction) | $\text{ZeroSumNormal}(0.25)$ | interaction $\approx$ half a main effect |
-| $\tau$ | $\text{Gamma}(2.66,\ 0.99)$ | process/lack-of-fit SD of order a few prey (90% within 0.3–5) |
-
-: Elicited priors for the primary model. All effect widths are derived from stated fold-change claims via $\sigma = \ln(R)/(1.96\sqrt{2})$; $a_0$ and $h_0$ are derived from stated interval claims via the equivalent closed-form maximum-entropy solution for a Normal. {#tbl-priors}
-
-### Inference and contrasts {#sec-inference}
-
-The model was implemented in PyMC 5+ and fit with the nutpie sampler, following prior predictive simulation to confirm simulated removal was contained by the offered density and that implied asymptotes and capture fractions were biologically plausible. Convergence was assessed via rank-normalized split-$\hat{R}$, bulk and tail effective sample size, and divergent transitions.
-
-Posterior contrasts are computed by reconstructing $\alpha_{ij}$ and $h_{ij}$ on the full prey-by-salinity grid from the fitted effect coefficients (@eq-attack, @eq-handling), rather than from the per-observation values used in the likelihood, so that comparisons are not tied to which densities happen to have been tested in a given cell. All reported intervals are 94% highest-density intervals (HDI); I report posterior distributions and their HDIs directly rather than applying a region-of-practical-equivalence threshold, so that estimates are read as effect sizes with uncertainty rather than as confirm/deny decisions against an arbitrary cutoff.
-
-Because attack rate and handling time enter the model through different link functions, they are summarized on different contrast scales. Attack rate is modeled on the logit scale but reported as a raw difference in capture fraction: capture fraction is a bounded, additive-feeling quantity, and "$x$ percentage points higher" is a portable statement independent of the baseline. Handling time is modeled on the log scale, i.e. multiplicatively — $h = \exp(h_0 + u^h + v^h + w^h)$ — so prey- and salinity-level comparisons are reported as ratios rather than differences: a raw difference in $h$ conflates the size of an effect with the (small, and cell-dependent) baseline value of $h$ itself, whereas the ratio (fold-change) is scale-invariant and matches the additive structure of the model on its native (log) scale.
-
-## Results
-
-### Convergence and prior predictive validation
-
-Sampling (4 chains, 2000 draws each after 1000 tuning steps) showed no divergent transitions, no chains hitting the maximum tree depth, and energy Bayesian fraction of missing information (BFMI) between 0.90 and 1.01 across chains, above the 0.3 threshold. No parameter was flagged for elevated $\hat{R}$ or insufficient effective sample size.
-
-Simulating from the priors alone, before conditioning on any data, showed the implied asymptote $A=1/h$ concentrated at biologically plausible values (median 38 prey, 1st–99th percentile 4.8–363) and the attack rate spanning the unit interval without piling at either bound (1st–99th percentile 0.025–0.983), consistent with the ignorance and heuristic elicitation of $a_0$ and $h_0$ (@sec-priors). A small fraction of simulated cell means exceeded the offered density (3.1%) — expected given the gamma likelihood's unbounded right tail (@eq-likelihood) and not itself a sign of prior misspecification, though it motivates the bounded-support model (M2) noted as future work.
-
-### Posterior predictive check
-
-After fitting, 96.4% of observed cell means fell within their own 94% posterior predictive interval, close to nominal and if anything mildly conservative (wider intervals than strictly required) rather than overconfident. The posterior predictive mean tracked the observed cell means closely: mean absolute error 1.94 prey and mean signed error +0.26 prey, a small, practically negligible bias toward over-prediction relative to the range of cell means in the data (roughly 1–50 prey). Together with the convergence diagnostics above, this supports treating the fitted model as an adequate basis for the contrasts reported below.
-
-![Posterior predictive distribution against observed cell means (heavier line), by prey and salinity.](../figures/ppc.png){#fig-ppc}
-
-### Attack rate
-
-```{=markdown}
-| contrast | mean | 94% HDI | $P(\text{diff}>0)$ |
-|---|---|---|---|
-| Nitokra $-$ Apocyclops | 0.047 | (−0.082, 0.175) | 0.77 |
-| Nitokra $-$ Brachionus | 0.082 | (−0.085, 0.241) | 0.83 |
-| Apocyclops $-$ Brachionus | 0.035 | (−0.132, 0.197) | 0.65 |
-| 10 g/L $-$ 20 g/L | 0.001 | (−0.142, 0.146) | 0.48 |
-| 10 g/L $-$ 30 g/L | −0.190 | (−0.338, −0.038) | 0.015 |
-| 20 g/L $-$ 30 g/L | −0.191 | (−0.304, −0.070) | 0.005 |
-```
-: Posterior contrasts in attack rate (capture fraction), pooled over the factor not contrasted. {#tbl-attack-contrasts}
-
-![Posterior contrasts in attack rate, with 94% HDIs (@tbl-attack-contrasts).](../figures/forest_attack_rate.png){#fig-forest-attack}
-
-None of the three pairwise prey contrasts excludes zero (@fig-forest-attack): the point estimates lean in the direction Nandini et al. (2026) report (Nitokra $>$ Apocyclops $>$ Brachionus), but the 94% HDI is wide enough in each case that the ordering is not distinguished by attack rate alone.
-
-Salinity shows a clear pattern instead. Attack rate at 10 and 20 g/L is indistinguishable (HDI tightly straddling zero), but both are credibly lower than at 30 g/L — the 10–30 and 20–30 contrasts each exclude zero, with 98.5% and 99.5% of posterior mass, respectively, favoring higher attack rate at 30 g/L. This is the opposite direction from an earlier exploratory fit that used wider, non-differentiated effect priors, in which attack rate appeared to fall at 30 g/L rather than rise; the sign is not stable across that prior choice, and the result reported here uses the maximum-entropy priors elicited in @sec-priors. This instability is itself informative: it indicates the salinity effect on attack rate is not strongly identified by the likelihood alone, and the reported direction should be read with that in mind pending a formal prior-sensitivity check (`psense`) on this contrast specifically.
-
-### Handling time
-
-```{=markdown}
-| contrast | mean ratio | 94% HDI | $P(\text{ratio}>1)$ |
-|---|---|---|---|
-| Nitokra / Apocyclops | 1.22 | (0.31, 2.37) | 0.56 |
-| Nitokra / Brachionus | 0.56 | (0.17, 1.03) | 0.06 |
-| Apocyclops / Brachionus | 0.56 | (0.14, 1.06) | 0.07 |
-| 10 g/L / 20 g/L | 2.55 | (1.03, 4.29) | 0.99 |
-| 10 g/L / 30 g/L | 1.49 | (0.57, 2.48) | 0.82 |
-| 20 g/L / 30 g/L | 0.69 | (0.29, 1.15) | 0.11 |
-```
-: Posterior contrasts in handling time, expressed as fold-change ratios, pooled over the factor not contrasted. {#tbl-handling-contrasts}
-
-![Posterior contrasts in handling time (fold-change ratio), with 94% HDIs (@tbl-handling-contrasts).](../figures/forest_handling_time.png){#fig-forest-handling}
-
-Both copepods show handling time roughly half that of the rotifer (ratios of 0.56; @fig-forest-handling), with 94–93% of posterior mass below 1; the 94% HDI does not quite exclude 1 in either case (upper bound 1.03–1.06), so this falls just short of the interval-based threshold used elsewhere in this paper, while remaining directionally consistent and worth reporting as suggestive.
-
-For salinity, only the 10 g/L vs. 20 g/L contrast excludes 1: handling time at 10 g/L is credibly longer, by a factor of roughly 2.5, than at 20 g/L (lower HDI bound 1.03). Handling time at 30 g/L is not credibly distinguished from either 10 or 20 g/L. The resulting shape — longer handling at the low and high ends, shorter in the middle — does not mirror the attack-rate salinity pattern (§Results, Attack rate), consistent with the two parameters being routed through the same design variables but not constrained to respond identically (@sec-stat-mdl).
-
-### Prior sensitivity: handling-time effects
-
-Because $h$ is weakly identified by sub-saturating curves (@sec-stat-mdl), I compared the prior and posterior for each handling-time effect coefficient directly (@fig-prior-posterior-h). Posterior standard deviations were 58–67% of their prior values for the prey main effects ($u^h$) and 75–89% for the salinity main effects ($v^h$), indicating the data meaningfully narrowed these coefficients rather than leaving them prior-determined. The prey×salinity interaction ($w^h$) showed markedly less narrowing, with posterior standard deviations 86–100% of the prior — several cells essentially unchanged from their prior width — consistent with the interaction being the least identified component of the model and the one most dependent on the elicited prior rather than the data. Posterior means for the main effects also shifted substantially from the prior, by up to 1.8 prior standard deviations, while interaction-cell shifts were more variable in both direction and magnitude. These results support interpreting the handling-time main effects as data-informed and the interaction as still substantially prior-shaped, and motivate treating $w^h$ conclusions cautiously pending either more data or a formal sensitivity analysis.
-
-![Prior (light) and posterior (dark) distributions for the handling-time prey, salinity, and interaction effects.](../figures/prior_posterior_h.png){#fig-prior-posterior-h}
-
-
+{{< include discussion.qmd >}}

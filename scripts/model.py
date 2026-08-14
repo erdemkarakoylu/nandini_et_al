@@ -20,26 +20,24 @@ notebook and the manuscript's Prior specification section). Any posterior
 produced before this update used the earlier, non-elicited prior widths;
 those results are stale and should be re-generated.
 """
-
 import numpy as np
 import pymc as pm
 import pytensor.tensor as pt
 
 
-def build_model(coords, N0, ybar, se, prey_idx, sal_idx):
+def build_model(coords, N0, ybar, se, prey_idx, sal_idx, a_sal_sigma=0.40, a_int_sigma=0.35):
     """Build the M1 functional-response model.
 
-    Structural layer is a Holling type-II disc equation,
-    ``mu = alpha * N0 / (1 + alpha * h * N0)``, with attack rate ``alpha``
-    (logit link, bounded in (0, 1)) and handling time ``h`` (log link,
-    strictly positive). Both parameters carry the same
-    ``{intercept, prey, salinity, prey x salinity interaction}`` structure,
-    with main effects and the interaction parameterized as ZeroSumNormal
-    (no reference level; each coefficient is a symmetric deviation from the
-    grand mean). The measurement layer combines a known per-observation
-    standard error (``se``) with an estimated process/lack-of-fit term
-    (``tau``) in quadrature, feeding a Gamma likelihood on the observed
-    cell mean.
+    Structural layer is a Holling type-II disc equation, ``mu = alpha * N0 /
+    (1 + alpha * h * N0)``, with attack rate ``alpha`` (logit link, bounded
+    in (0, 1)) and handling time ``h`` (log link, strictly positive). Both
+    parameters carry the same ``{intercept, prey, salinity, prey x salinity
+    interaction}`` structure, with main effects and the interaction
+    parameterized as ZeroSumNormal (no reference level; each coefficient is
+    a symmetric deviation from the grand mean). The measurement layer
+    combines a known per-observation standard error (``se``) with an
+    estimated process/lack-of-fit term (``tau``) in quadrature, feeding a
+    Gamma likelihood on the observed cell mean.
 
     Parameters
     ----------
@@ -60,6 +58,23 @@ def build_model(coords, N0, ybar, se, prey_idx, sal_idx):
     sal_idx : ndarray of int, shape (n_obs,)
         Zero-based salinity index for each observation, aligned with
         ``coords["salinity"]``.
+    a_sal_sigma : float, default 0.40
+        ZeroSumNormal scale for the salinity main effect on attack rate
+        (logit scale). Default is the maximum-entropy value elicited in
+        ``01_prior_elicitation.ipynb`` (R~3x salinity fold-change claim).
+        Exposed as an argument, rather than hardcoded, specifically to
+        support prior-sensitivity sweeps: power-scaling analysis flagged
+        this parameter as showing prior-data conflict (see
+        02_sampling_and_inference.ipynb), so its stability across a range
+        of defensible widths is itself a diagnostic question, not just a
+        single committed value.
+    a_int_sigma : float, default 0.35
+        ZeroSumNormal scale for the prey x salinity interaction on attack
+        rate (logit scale). Default is the elicited value (half the
+        prey main-effect scale, a background lean toward additivity).
+        Exposed for the same prior-sensitivity-sweep reason as
+        ``a_sal_sigma``: power-scaling analysis flagged every interaction
+        cell as showing prior-data conflict.
 
     Returns
     -------
@@ -70,9 +85,9 @@ def build_model(coords, N0, ybar, se, prey_idx, sal_idx):
     """
     with pm.Model(coords=coords) as fr_model:
         # Everything that could be swapped at predict-time lives in pm.Data
-        N0_ = pm.Data("N0", N0, dims="obs")  # predictor AND upper bound
-        ybar_ = pm.Data("ybar", ybar, dims="obs")  # observed cell mean
-        se_ = pm.Data("se", se, dims="obs")  # known SE
+        N0_ = pm.Data("N0", N0, dims="obs")        # predictor AND upper bound
+        ybar_ = pm.Data("ybar", ybar, dims="obs")   # observed cell mean
+        se_ = pm.Data("se", se, dims="obs")         # known SE
         pix = pm.Data("prey_idx", prey_idx, dims="obs")
         six = pm.Data("sal_idx", sal_idx, dims="obs")
 
@@ -89,14 +104,14 @@ def build_model(coords, N0, ybar, se, prey_idx, sal_idx):
         #     pre-data.
         a0 = pm.Normal("a0", mu=0, sigma=1.5)
         a_prey = pm.ZeroSumNormal("a_prey", sigma=0.70, dims="prey")
-        a_sal = pm.ZeroSumNormal("a_sal", sigma=0.40, dims="salinity")
+        a_sal = pm.ZeroSumNormal("a_sal", sigma=a_sal_sigma, dims="salinity")
         # interaction: deviation not explained by the two main effects,
         # sum-to-zero on BOTH margins (n_zerosum_axes=2). Has a sigma lower
         # than the main-effect sigma, encoding a background lean toward
         # additivity -- the interaction is a correction, expected to be the
         # smaller term until the data says otherwise.
         a_int = pm.ZeroSumNormal(
-            "a_int", sigma=0.35, dims=("prey", "salinity"), n_zerosum_axes=2
+            "a_int", sigma=a_int_sigma, dims=("prey", "salinity"), n_zerosum_axes=2
         )
         alpha = pm.Deterministic(
             "\u03b1",
@@ -131,9 +146,13 @@ def build_model(coords, N0, ybar, se, prey_idx, sal_idx):
 
         # --- Holling type II disc equation, native (attack rate, handling
         # time) form ---
-        mu = pm.Deterministic("\u03bc", alpha * N0_ / (1 + alpha * h * N0_), dims="obs")
+        mu = pm.Deterministic(
+            "\u03bc", alpha * N0_ / (1 + alpha * h * N0_), dims="obs"
+        )
         tau = pm.Gamma("\u03c4", alpha=2.66, beta=0.99)
-        sigma_eff = pm.Deterministic("\u03c3_eff", pt.sqrt(tau**2 + se_**2), dims="obs")
+        sigma_eff = pm.Deterministic(
+            "\u03c3_eff", pt.sqrt(tau**2 + se_**2), dims="obs"
+        )
 
         pm.Gamma("likelihood", mu=mu, sigma=sigma_eff, observed=ybar_, dims="obs")
 
