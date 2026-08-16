@@ -157,3 +157,94 @@ def build_model(coords, N0, ybar, se, prey_idx, sal_idx, a_sal_sigma=0.40, a_int
         pm.Gamma("likelihood", mu=mu, sigma=sigma_eff, observed=ybar_, dims="obs")
 
     return fr_model
+
+
+def build_model_m2(coords, N0, ybar, se, prey_idx, sal_idx, a_sal_sigma=0.40, a_int_sigma=0.35):
+    """Build the M2 functional-response model (bounded-support alternative).
+
+    Identical structural layer to :func:`build_model` (M1): the same Holling
+    disc equation, the same elicited priors on attack rate and handling time
+    (``a0``, ``a_prey``, ``a_sal``, ``a_int``, ``h0``, ``h_prey``, ``h_sal``,
+    ``h_int``). Only the measurement layer differs.
+
+    M1's Gamma likelihood on the raw count ``ybar`` has unbounded support, so
+    a simulated observation can exceed the offered density ``N0`` even though
+    the structural mean ``mu`` cannot (prior predictive check showed this
+    happens for a few percent of draws). M2 instead models the *fraction*
+    consumed, ``p = mu / N0``, with a Beta likelihood on the observed
+    fraction ``ybar / N0`` -- bounded in (0, 1) by construction, respecting
+    the physical ceiling for the observation itself, not just its mean.
+
+    The cost, already flagged in the manuscript's Methods: M2 has no
+    analogue of M1's clean process/measurement variance decomposition
+    (``tau`` and the known ``se``). A single dispersion parameter ``phi``
+    (Beta's ``nu``, a concentration parameter -- larger means less spread
+    around the mean fraction) replaces both. ``phi``'s prior below is a
+    placeholder, not yet elicited from background knowledge the way ``tau``
+    was; it should not be read as a final commitment.
+
+    Parameters
+    ----------
+    coords, N0, ybar, se, prey_idx, sal_idx, a_sal_sigma, a_int_sigma
+        Same as :func:`build_model`. ``se`` is accepted for interface
+        parity with M1 and for any future measurement-scale use, but is
+        not used in M2's likelihood, which relies on ``phi`` alone for
+        dispersion.
+
+    Returns
+    -------
+    pymc.Model
+        The unfit M2 model.
+    """
+    with pm.Model(coords=coords) as fr_model_m2:
+        N0_ = pm.Data("N0", N0, dims="obs")
+        ybar_ = pm.Data("ybar", ybar, dims="obs")
+        pix = pm.Data("prey_idx", prey_idx, dims="obs")
+        six = pm.Data("sal_idx", sal_idx, dims="obs")
+
+        # --- attack rate and handling time: identical structure and priors
+        # to M1 (build_model). See that function for the per-prior rationale. ---
+        a0 = pm.Normal("a0", mu=0, sigma=1.5)
+        a_prey = pm.ZeroSumNormal("a_prey", sigma=0.70, dims="prey")
+        a_sal = pm.ZeroSumNormal("a_sal", sigma=a_sal_sigma, dims="salinity")
+        a_int = pm.ZeroSumNormal(
+            "a_int", sigma=a_int_sigma, dims=("prey", "salinity"), n_zerosum_axes=2
+        )
+        alpha = pm.Deterministic(
+            "\u03b1",
+            pm.math.invlogit(a0 + a_prey[pix] + a_sal[six] + a_int[pix, six]),
+            dims="obs",
+        )
+
+        h0 = pm.Normal("h0", np.log(1 / 40), 0.74)
+        h_prey = pm.ZeroSumNormal("h_prey", sigma=0.50, dims="prey")
+        h_sal = pm.ZeroSumNormal("h_sal", sigma=0.30, dims="salinity")
+        h_int = pm.ZeroSumNormal(
+            "h_int", sigma=0.25, dims=("prey", "salinity"), n_zerosum_axes=2
+        )
+        h = pm.Deterministic(
+            "h",
+            pt.exp(h0 + h_prey[pix] + h_sal[six] + h_int[pix, six]),
+            dims="obs",
+        )
+        pm.Deterministic("A", 1.0 / h, dims="obs")
+
+        mu = pm.Deterministic(
+            "\u03bc", alpha * N0_ / (1 + alpha * h * N0_), dims="obs"
+        )
+
+        # --- M2-specific measurement layer: bounded fraction, Beta likelihood ---
+        # p = mu/N0 is the expected FRACTION consumed; in (0, alpha) subset (0,1)
+        # by the same construction that bounds mu < N0 in M1.
+        p = pm.Deterministic("p", mu / N0_, dims="obs")
+
+        # phi: PLACEHOLDER prior, not yet elicited. Gamma keeps it positive and
+        # away from the pathological nu->0 (infinite dispersion) region; the
+        # scale is a rough guess at "moderate" concentration, to be revisited
+        # with the same background-elicitation rigor as tau.
+        phi = pm.Gamma("\u03c6", alpha=2.0, beta=0.1)
+
+        y_frac = ybar_ / N0_
+        pm.Beta("likelihood", mu=p, nu=phi, observed=y_frac, dims="obs")
+
+    return fr_model_m2

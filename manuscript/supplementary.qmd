@@ -1,0 +1,61 @@
+## Supplementary Materials
+
+### S1. The M2 model {#sec-m2-model}
+
+![M2's causal structure (left) is identical to M1's; only the measurement layer (right) differs — a bounded fraction consumed in place of M1's process-plus-measurement count.](../figures/m2_dag.png){#fig-m2-dag}
+
+M2 shares its causal structure and its attack-rate and handling-time priors with M1 (@sec-stat-mdl, @sec-priors); only the measurement layer differs. For prey $i$, salinity $j$, and density index $k$:
+
+$$\text{logit}(\alpha_{ij}) = a_0 + u_i^a + v_j^a + w_{ij}^a, \qquad \log(h_{ij}) = h_0 + u_i^h + v_j^h + w_{ij}^h$${#eq-m2-params}
+
+$$\mu_{ijk} = \frac{\alpha_{ij} N_{0,ijk}}{1 + \alpha_{ij} h_{ij} N_{0,ijk}}$${#eq-m2-holling}
+
+are unchanged from M1, with the same elicited priors on every term. M2 diverges starting from $\mu$: rather than modeling the count $\bar y_{ijk}$ directly, it models the fraction of offered prey consumed,
+
+$$p_{ijk} = \frac{\mu_{ijk}}{N_{0,ijk}}$${#eq-m2-p}
+
+which is bounded in $(0,1)$ for the same reason $\mu_{ijk} < N_{0,ijk}$ is guaranteed in M1: $\alpha_{ij} \in (0,1)$ and the disc equation's denominator is $\geq 1$. The likelihood is placed directly on the observed fraction:
+
+$$\frac{\bar y_{ijk}}{N_{0,ijk}} \sim \text{Beta}\left(\text{mean}=p_{ijk},\ \nu=\phi\right)$${#eq-m2-likelihood}
+
+where $\phi$ is a single global concentration parameter: larger $\phi$ means less spread around $p_{ijk}$. Unlike M1's $\tau$, $\phi$'s prior has not yet been elicited from background knowledge in the manner of the rest of this model's priors (@sec-priors); it is a placeholder, given a weakly informative $\text{Gamma}(2,\ 0.1)$ prior for the analysis reported below. M1's known measurement error $se_{ijk}$ has no direct analogue in this parameterization and is not used in M2's likelihood.
+
+The consequence of this construction, verified by prior predictive simulation, is that every simulated observation $\bar y_{ijk}/N_{0,ijk}$ falls strictly in $(0,1)$ — the physical constraint that prey consumed cannot exceed prey offered holds for the simulated data itself, not only for its mean, which is the property M1 lacks.
+
+### S2. Model comparison: M1 vs. M2 {#sec-m2-comparison}
+
+M1 (@sec-stat-mdl) and M2 (@sec-m2-model) share an identical structural layer and identical priors on attack rate and handling time; they differ only in the measurement layer. M1's gamma likelihood is over the raw count $\bar y$, with unbounded support: the prior predictive check (@sec-inference) showed a small fraction (~3%) of simulated cell means exceeding the offered density $N_0$, a structural impossibility. M2's beta likelihood on the observed fraction consumed is bounded in $(0,1)$ by construction, resolving that violation.
+
+#### Posterior predictive calibration
+
+| model | coverage (94% nominal) | mean abs. error (count scale) | mean signed error (count scale) |
+|---|---|---|---|
+| M1 | 96.4% | 1.94 | +0.26 |
+| M2 | 98.2% | 2.29 | $-$0.15 |
+
+M2 is more conservative (higher coverage, smaller signed bias) but has a larger mean absolute error than M1. Neither metric alone settles which model is preferable, motivating a formal predictive comparison.
+
+#### Jacobian correction for LOO-CV
+
+M1's likelihood is a density over $\bar y$; M2's is a density over $z = \bar y/N_0$. These are different random variables related by a per-observation rescaling ($N_0$ varies across cells), so their pointwise log-likelihoods — and therefore their `elpd_loo` — are not comparable without a change-of-variables correction. If $z = \bar y/N_0$, then $dz/d\bar y = 1/N_0$, and
+
+$$\log f_{\bar y}(\bar y) = \log f_{\text{Beta}}(z) + \log\left|\frac{dz}{d\bar y}\right| = \log f_{\text{Beta}}(z) - \log(N_0).$$
+
+This was applied via `arviz_stats.loo`'s `log_jacobian` argument, passing $-\log(N_0)$ per observation, before comparison.
+
+#### Results
+
+| model | elpd_loo | SE | p_loo | Pareto-$\hat k$: good / bad / very bad |
+|---|---|---|---|---|
+| M1 | $-150.62$ | 8.92 | 16.77 | 53 / 3 / 0 (94.6% good) |
+| M2 | $-309.43$ | 13.48 | 9.59 | 56 / 0 / 0 (100% good) |
+
+$\text{elpd\_diff} = -158.8$, $\text{dse} = 9.0$ (M2 relative to M1; stacking weight M1 = 1.0, M2 = 0.0). M1 is preferred by a wide margin — roughly 17.6 standard errors — well beyond the threshold ($4\times\text{dse}$) treated elsewhere as strong evidence for a predictive-accuracy difference.
+
+Part of this gap is a necessary consequence of the correction itself rather than of shape-fit alone: converting a bounded density on $(0,1)$ to a count-scale density via division by $N_0$ (which ranges roughly 5–120 in this dataset) mechanically lowers the log-density by an amount of order $\log(N_0)$ at every observation, before any question of how well either model's shape matches the data. This is the correct price of a fair comparison, not an artifact to be removed, but it means the raw magnitude of the gap should not be read as attributable entirely to fit quality; the coverage and MAE comparison above, which does not require this correction, points in the same direction independently and supports treating the LOO result as substantively meaningful rather than a scale artifact.
+
+M1's own estimate carries a caveat: 3 of 56 observations have Pareto-$\hat k > 0.70$, indicating PSIS-LOO is less reliable at those points specifically. M2 has none. Given the size of the elpd gap, this is very unlikely to reverse the ranking, but the affected observations were not individually identified in this analysis and are flagged here rather than investigated further.
+
+#### Conclusion
+
+M1 is retained as the primary model reported in the main text on the basis of this comparison. M2's bounded support resolves a real, if infrequent, structural violation in M1's prior predictive distribution, but does not describe the observed data as well on either the LOO-CV or posterior-predictive-calibration criterion, evaluated on a directly comparable scale via the Jacobian correction above.

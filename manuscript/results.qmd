@@ -4,7 +4,7 @@
 
 Sampling (4 chains, 2000 draws each after 1000 tuning steps) showed no divergent transitions, no chains hitting the maximum tree depth, and energy Bayesian fraction of missing information (BFMI) between 0.90 and 1.01 across chains, above the 0.3 threshold. No parameter was flagged for elevated $\hat{R}$ or insufficient effective sample size.
 
-Simulating from the priors alone, before conditioning on any data, showed the implied asymptote $A=1/h$ concentrated at biologically plausible values (median 38 prey, 1st–99th percentile 4.8–363) and the attack rate spanning the unit interval without piling at either bound (1st–99th percentile 0.025–0.983), consistent with the ignorance and heuristic elicitation of $a_0$ and $h_0$ (@sec-priors). A small fraction of simulated cell means exceeded the offered density (3.1%) — expected given the gamma likelihood's unbounded right tail (@eq-likelihood) and not itself a sign of prior misspecification, though it motivates the bounded-support model (M2) noted as future work.
+Simulating from the priors alone, before conditioning on any data, showed the implied asymptote $A=1/h$ concentrated at biologically plausible values (median 38 prey, 1st–99th percentile 4.8–363) and the attack rate spanning the unit interval without piling at either bound (1st–99th percentile 0.025–0.983), consistent with the ignorance and heuristic elicitation of $a_0$ and $h_0$ (@sec-priors). A small fraction of simulated cell means exceeded the offered density (3.1%) — expected given the gamma likelihood's unbounded right tail (@eq-likelihood) and not itself a sign of prior misspecification, though it motivates the bounded-support alternative (M2) compared against this model in @sec-m2-comparison.
 
 ### Posterior predictive check
 
@@ -12,7 +12,7 @@ After fitting, 96.4% of observed cell means fell within their own 94% posterior 
 
 ![Posterior predictive distribution against observed cell means (heavier line), by prey and salinity.](../figures/ppc.png){#fig-ppc}
 
-### Attack rate
+### Attack rate {#sec-attack-rate}
 
 ![Posterior contrasts in attack rate (capture fraction), pooled over the factor not contrasted. Each row is one pairwise comparison; the point marks the posterior mean difference and the horizontal bar its 94% HDI (@sec-inference). The vertical dashed line at zero marks no difference: a bar that does not cross it indicates most posterior mass favors a difference in that direction, while a bar that does cross it indicates the data do not distinguish the two levels at this probability mass. This is a statement about where the effect plausibly lies, not a significance test.](../figures/forest_attack_rate.png){#fig-forest-attack}
 
@@ -28,7 +28,7 @@ Power-scaling sensitivity (`psense`) on the salinity main effect ($v^a$) flagged
 
 Both copepods show handling time roughly half that of the rotifer (ratios of 0.56; @fig-forest-handling), with 94–93% of posterior mass below 1; the 94% HDI does not quite exclude 1 in either case (upper bound 1.03–1.06), so this falls just short of the interval-based threshold used elsewhere in this paper, while remaining directionally consistent and worth reporting as suggestive.
 
-For salinity, only the 10 g/L vs. 20 g/L contrast excludes 1: handling time at 10 g/L is credibly longer, by a factor of roughly 2.5, than at 20 g/L (lower HDI bound 1.03). Handling time at 30 g/L is not credibly distinguished from either 10 or 20 g/L. The resulting shape — longer handling at the low and high ends, shorter in the middle — does not mirror the attack-rate salinity pattern (§Results, Attack rate), consistent with the two parameters being routed through the same design variables but not constrained to respond identically (@sec-stat-mdl).
+For salinity, only the 10 g/L vs. 20 g/L contrast excludes 1: handling time at 10 g/L is credibly longer, by a factor of roughly 2.5, than at 20 g/L (lower HDI bound 1.03). Handling time at 30 g/L is not credibly distinguished from either 10 or 20 g/L. The resulting shape — longer handling at the low and high ends, shorter in the middle — does not mirror the attack-rate salinity pattern (@sec-attack-rate), consistent with the two parameters being routed through the same design variables but not constrained to respond identically (@sec-stat-mdl).
 
 ### Prior sensitivity: handling-time effects
 
