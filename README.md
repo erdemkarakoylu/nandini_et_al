@@ -1,50 +1,159 @@
-***
+# Less Testing, More Estimating
 
-# Generative Re-Analysis of Hydrozoan Functional Response and Prey Preference
+A causal-graph-first, Bayesian reanalysis of the functional response of the invasive
+hydroid *Cordylophora caspia*, reanalyzing the dataset of Nandini et al. (2026) as a
+worked demonstration of an alternative to null-hypothesis significance testing (NHST)
+for controlled ecological experiments. Part I of a two-paper series; a companion paper
+extending the same graph-first workflow to observational data is planned separately.
 
-## Overview
-This repository contains a complete Bayesian hierarchical re-analysis of a published ecological study detailing the functional response and prey preference of a hydrozoan predator across varying salinity gradients and prey types (copepods and rotifers). 
+## Why this repository exists
 
-The primary objective of this project is to move beyond the descriptive, frequentist constraints of the original analysis (e.g., arbitrary Gaussian assumptions, ANOVA smoothing, and unconstrained Michaelis-Menten fits) toward a rigorous, mechanistically grounded generative model. By explicitly modeling the data-generating process, this re-analysis recaptures the underlying biological variance (such as behavioral stochasticity and "surplus killing") that is traditionally discarded as statistical noise.
+The original study drew its conclusions from two-way ANOVA on prey numbers and, in a
+separate analysis, prey biomass. The two analyses disagree: salinity and a
+prey$\times$salinity interaction are significant for numbers consumed, but not for
+biomass — and the paper's summary conclusion ("salinity had no effect") reflects only
+the biomass result. This is not presented as an error specific to that paper; it is an
+illustration of a general property of NHST — a non-significant result is easily, and
+commonly, generalized into "no effect," a documented and worsening pattern in ecological
+reporting.
 
-## Methodological Rationale
+This repository reanalyzes the same dataset with a different discipline: draw the causal
+graph before writing any statistical model, fit a Bayesian generative model consistent
+with that graph, elicit every prior from background knowledge stated in advance (never
+from the data being analyzed), and report every conclusion as a posterior effect size
+with an interval, checked for sensitivity to the prior actually chosen — reporting
+whichever answer that check returns, not the answer that was hoped for.
 
-The original study relies on frequentist null-hypothesis testing and aggregated point estimates, which mask critical interactions and physical boundaries. This repository implements a full Bayesian workflow using the Python ecosystem (PyMC and ArviZ) focusing on direct parameter estimation and comprehensive uncertainty quantification.
+## Modeling summary
 
-Key structural upgrades include:
-* **Bounded Likelihoods:** Correcting the arbitrary continuous curve-fitting of functional responses by recognizing that prey depletion is a bounded discrete process. The model respects the physical limit of Initial Abundance ($N_0$).
-* **Structural Identifiability:** Replacing standard additive categorical models with `ZeroSumNormal` distributions to eliminate collinearity and rigorously partition variance between grand means, main effects, and interactions.
-* **Hierarchical Shrinkage:** Utilizing partial pooling to naturally regularize estimates for treatments with high variance or low replicate counts ($N=1$), allowing the data to dictate the complexity of the interaction matrix without overfitting.
+The functional response is modeled as Holling's type II disc equation,
 
-## Data Architecture
+$$\mu = \frac{\alpha N_0}{1 + \alpha h N_0}$$
 
-Ecological datasets are frequently published in formats optimized for spreadsheet viewing rather than programmatic analysis. A significant portion of this repository is dedicated to a reproducible extraction pipeline.
+with attack rate $\alpha$ (logit link, bounded in $(0,1)$) and handling time $h$ (log
+link, positive), each carrying a `{prey, salinity, prey$\times$salinity interaction}`
+structure. Main effects and the interaction are parameterized as `ZeroSumNormal`: no
+prey type or salinity level is a privileged reference, so every coefficient is a
+symmetric deviation from a shared grand mean, constrained to sum to zero across levels.
+Priors on every term are elicited in `01_prior_elicitation.ipynb`, entirely without
+reference to the dataset: each is built from an interpretable, literature-anchored claim
+(a capture fraction, a fold-change between levels) mapped to its maximum-entropy
+distribution.
 
-* **Phase 1 Data (Functional Response):** Extracted from the author's aggregated summaries (`Hoja1`). We correct a crucial nomenclature error in the original study, translating the reported "Density" ($N/V$) back to the actual experimental unit of **Initial Total Abundance ($N_0$)**.
-* **Phase 2 Data (Prey Preference):** Extracted from the raw, unstructured "buffet" experiment matrices (`Hoja3`), preserving the true, overdispersed replicate counts required for multinomial modeling.
+Two measurement-layer variants are built and compared:
 
-## Modeling Pipeline
+- **M1 (primary, reported model).** A gamma likelihood on the raw count $\bar y$, with
+  scale $\sigma_{\text{eff}} = \sqrt{\tau^2 + se^2}$ combining an estimated
+  process/lack-of-fit term $\tau$ with the reported standard error $se$ in quadrature.
+- **M2 (compared alternative).** A beta likelihood on the fraction consumed
+  $\bar y / N_0$, bounded in $(0,1)$ by construction — addressing a small, physically
+  impossible ceiling violation in M1's prior predictive distribution (simulated
+  consumption occasionally exceeding the offered density, since the gamma's support is
+  unbounded even though its mean is not).
 
-The modeling is split into two distinct, cascading Bayesian phases:
+The two are compared by leave-one-out cross-validation, with an explicit Jacobian
+correction for the change of variables between the count and proportion scales (see
+`manuscript/supplementary.qmd`). M1 is preferred by a wide margin and is the model
+reported throughout the paper; M2's fit, comparison, and remaining open items (its
+dispersion parameter is not yet elicited) are documented in the supplementary material
+rather than adopted.
 
-### Phase 1: Bounded Functional Response (Rogers' Random Predator)
-We fit a mechanistically grounded functional response model to estimate the Attack Rate ($\alpha$) and Handling Time ($h$). Because the raw functional response replicates were unavailable, we utilize a **Measurement Error** approach. We model the "true" latent proportion of prey consumed—bounded strictly by $N_0$—and map it to the author's reported standard errors using a Normal likelihood. 
+Every parameter flagged by power-scaling prior sensitivity (`psense`) is followed up
+with a prior-width sweep rather than reported at face value. The outcomes differ: the
+salinity effect on attack rate is directionally stable across a wide range of prior
+choices and is reported as a finding; the prey$\times$salinity interaction's apparent
+significance depends on adopting a prior looser than the one actually elicited, and is
+**not** reported as a confirmed effect. Both outcomes are treated as legitimate results
+of the same check, not selectively reported.
 
-### Phase 2: Multinomial Prey Preference
-Instead of analyzing preference in isolation, we treat it as a generative consequence of Phase 1. The posterior distributions for $\alpha$ and $h$ derived from the single-prey functional response are utilized as structural priors for a **Multinomial Choice Model**. By comparing what the predator *should* have eaten against the raw `Hoja3` counts of what they *actually* ate in a mixed environment, we can isolate complex behavioral interaction effects (e.g., predator confusion, prey-switching, or handling-time inflation).
+No prey-preference or choice model is built in this repository. The raw preference
+counts (`Hoja3` in the authors' data) are extracted and available
+(`hoja3_prey_preference.csv`) but not yet modeled; this is future work, not a completed
+phase.
 
-## Repository Structure
+## Repository structure
 
 ```text
+.
+├── .gitignore
 ├── data/
-│   ├── dataset.xlsx   # Raw data sent by authors
-│   ├── processed/     # Tidy CSVs generated by the extraction pipeline
-│   │   ├── hoja1_functional_response.csv
-│   │   └── hoja3_prey_preference.csv
+│   ├── sent_data/                           # NOT TRACKED -- see "Data availability and licensing" below
+│   │   ├── dataset.xlsx                     # raw data sent by the study's authors
+│   │   └── processed/
+│   │       ├── hoja1_functional_response.csv  # aggregated FR data (Figure 2), authoritative
+│   │       └── hoja3_prey_preference.csv      # raw preference-assay replicate counts
+│   └── extracted_data/                      # tracked -- digitized from a CC-BY-licensed figure
+│       ├── figure_2/                        # hand-digitized points from the original Figure 2
+│       └── processed/
+│           └── d_final.csv                  # digitized reconstruction (superseded, kept for provenance)
 ├── notebooks/
-│   ├── 00_data_extraction_and_eda.ipynb   # Automated parsing and variance visualization
-│   ├── 01_phase1_functional_response.ipynb # PyMC Measurement Error model
-│   └── 02_phase2_prey_preference.ipynb     # PyMC Multinomial choice model
-├── src/
-│   └── data_pipeline.py     # Functional extraction scripts 
-└── README.md
+│   ├── 00_raw_data_wrangle.ipynb            # authoritative extraction: Hoja1 + Hoja3 from dataset.xlsx
+│   ├── 00_digitized_data_wrangle.ipynb      # digitized-from-figure reconstruction + cross-check (run after 00_raw_*)
+│   ├── 01_prior_elicitation.ipynb           # all priors, data-free by design
+│   └── 02_sampling_and_inference.ipynb      # M1 + M2 build, sampling, diagnostics, contrasts, prior sensitivity, LOO comparison
+├── scripts/
+│   ├── model.py                             # build_model (M1), build_model_m2 (M2)
+│   ├── plot_utils.py                        # DAG rendering, forest plots, prior-vs-posterior plots
+│   └── stats_utils.py                       # posterior reconstruction, contrasts, calibration summaries
+├── figures/                                  # NOT TRACKED -- regenerable; all rendered manuscript figures
+├── artifacts/                                 # NOT TRACKED -- saved InferenceData checkpoints (e.g. m1_idata.nc)
+└── manuscript/
+    ├── main.qmd                             # top-level Quarto document (includes the sections below)
+    ├── introduction.qmd
+    ├── methods.qmd
+    ├── results.qmd
+    ├── discussion.qmd
+    ├── supplementary.qmd                    # M2 model spec and the M1-vs-M2 comparison (not included in main.qmd by default)
+    └── references.bib
+```
+
+## Data availability and licensing
+
+Two data sources feed this repository, with different licensing status, and they are
+treated differently as a result.
+
+**`data/extracted_data/` — tracked.** Digitized directly from the original paper's
+published Figure 2. Nandini et al. (2026) is published under CC-BY 4.0, which
+explicitly permits reuse, distribution, and reproduction in any medium provided the
+original work is cited — so redistributing points extracted from that published figure
+is within the terms of the license the authors themselves chose.
+
+**`data/sent_data/` — not tracked.** The raw Excel file behind this reanalysis was
+shared directly by the study's authors, outside of any formal publication or open-data
+deposit. The paper's own Data Availability statement reads "data will be made available
+on reasonable request" — a private, gatekept arrangement, not an open license.
+Agreeing to share the file with one requester for reanalysis is not the same as
+consenting to its public redistribution, so it is not included here, and neither are
+the CSVs derived directly from it (`hoja1_functional_response.csv`,
+`hoja3_prey_preference.csv`), regardless of how closely their values match the
+CC-BY-derived digitized reconstruction (`d_final.csv`) -- the two were cross-validated
+at r = 0.9999 in `00_digitized_data_wrangle.ipynb`, but that numerical similarity does
+not transfer redistribution rights from one source to the other.
+
+**Practical consequence:** a fresh clone of this repository cannot run
+`00_raw_data_wrangle.ipynb`, or anything downstream of its output (including the
+primary model in `02_sampling_and_inference.ipynb`), without separately obtaining
+`dataset.xlsx`. To request it, see the corresponding author's contact details in
+Nandini et al. (2026), or open an issue in this repository.
+
+## Reproducing this analysis
+
+1. `00_raw_data_wrangle.ipynb` — must run first; produces the CSVs everything else
+   depends on. **Requires `data/sent_data/dataset.xlsx`**, which is not included in
+   this repository (see "Data availability and licensing" above) and must be obtained
+   separately before this step will run.
+2. `00_digitized_data_wrangle.ipynb` — optional cross-check against (1)'s output;
+   depends on it despite the alphabetical filename order. The digitized source data
+   (`data/extracted_data/`) is included, but the comparison step still needs (1)'s
+   output to compare against.
+3. `01_prior_elicitation.ipynb` — no dependency on (1) or (2), and no dependency on
+   any data file; can run any time.
+4. `02_sampling_and_inference.ipynb` — depends on (1)'s output and on `scripts/model.py`.
+
+To render the manuscript, run Quarto on `manuscript/main.qmd`. `supplementary.qmd` is
+not included by default; add `{{< include supplementary.qmd >}}` to `main.qmd` to
+include the M2 model and comparison in the rendered output.
+
+For the extraction logic and known layout quirks of the source spreadsheet, see
+`00_raw_data_wrangle.ipynb`; for the experimental design, see the manuscript's
+Data and study system section (`manuscript/methods.qmd`).
