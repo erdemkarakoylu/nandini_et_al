@@ -85,7 +85,7 @@ phase.
 │   └── extracted_data/                      # tracked -- digitized from a CC-BY-licensed figure
 │       ├── figure_2/                        # hand-digitized points from the original Figure 2
 │       └── processed/
-│           └── d_final.csv                  # digitized reconstruction (superseded, kept for provenance)
+│           └── d_final.csv                  # digitized reconstruction; not what M1/M2 were fit to, but the dataset publicly available here (see "Data availability and licensing")
 ├── notebooks/
 │   ├── 00_raw_data_wrangle.ipynb            # authoritative extraction: Hoja1 + Hoja3 from dataset.xlsx
 │   ├── 00_digitized_data_wrangle.ipynb      # digitized-from-figure reconstruction + cross-check (run after 00_raw_*)
@@ -135,6 +135,27 @@ not transfer redistribution rights from one source to the other.
 primary model in `02_sampling_and_inference.ipynb`), without separately obtaining
 `dataset.xlsx`. To request it, see the corresponding author's contact details in
 Nandini et al. (2026), or open an issue in this repository.
+
+**What this means for citing this dataset.** `d_final.csv` and the raw digitized points
+in `data/extracted_data/figure_2/` are the only data files this repository can
+legally make public, and they are accordingly what its own data-availability statement
+points to. This is a deliberate scope limitation, not an oversight: the manuscript's
+data-availability statement reads
+
+> The raw experimental data underlying this reanalysis were provided directly by the
+> authors of the original study (Nandini et al. 2026,
+> https://doi.org/10.1093/plankt/fbaf065) and are available from them on reasonable
+> request, per that paper's own data availability statement. A digitized
+> reconstruction derived from that paper's openly licensed (CC-BY 4.0) Figure 2 --
+> used here only as an independent cross-check on the primary extraction, not as the
+> data the reported models were fit to -- is version-controlled in this repository at
+> `data/extracted_data/`.
+
+The distinction to hold onto: `hoja1_functional_response.csv` (gated, from the
+authors) is what M1 and M2 are actually fit to and what every number in the manuscript
+comes from. `d_final.csv` (public, digitized) is a validation artifact that happens to
+track it closely (r = 0.9999) -- not an interchangeable substitute, and not what
+"available in this repository" should be read as endorsing as the primary source.
 
 ## Reproducing this analysis
 
