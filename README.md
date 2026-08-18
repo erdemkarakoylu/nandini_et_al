@@ -1,4 +1,4 @@
-# Less Testing, More Estimating
+# Estimate, Don't Test. Causal Bayesian Inference in Marine Ecology
 
 A causal-graph-first, Bayesian reanalysis of the functional response of the invasive
 hydroid *Cordylophora caspia*, reanalyzing the dataset of Nandini et al. (2026) as a
