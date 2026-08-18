@@ -1,5 +1,5 @@
 ---
-title: "Estimate, Don't Test. Causal Bayesian Inferfence in Marine Ecology"
+title: "Estimate, Don't Test. Causal Bayesian Inference in Marine Ecology"
 subtitle: "Part I:  Controlled Experiments "
 author:
   - name: "Erdem M Karaköylü"
