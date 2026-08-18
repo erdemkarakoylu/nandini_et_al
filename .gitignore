@@ -12,3 +12,8 @@
 *.log
 *.nc
 *.pyc
+
+# data/extracted_data/ is digitized from the published Figure 2 (CC-BY 4.0) and is
+# version-controlled here as the paper's public data-availability source -- re-include
+# despite the blanket *.csv rule above.
+!data/extracted_data/**/*.csv
