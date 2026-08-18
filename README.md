@@ -138,7 +138,7 @@ Nandini et al. (2026), or open an issue in this repository.
 
 **What this means for citing this dataset.** `d_final.csv` and the raw digitized points
 in `data/extracted_data/figure_2/` are the only data files this repository can
-legally make public, and they are accordingly what its own data-availability statement
+reasonably make public, and they are accordingly what its own data-availability statement
 points to. This is a deliberate scope limitation, not an oversight: the manuscript's
 data-availability statement reads
 
