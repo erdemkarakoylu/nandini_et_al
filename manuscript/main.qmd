@@ -10,40 +10,10 @@ author:
 
 date: today
 abstract: |
-  Null-hypothesis significance testing remains the default inferential tool for
-  treatment-effect questions in ecology, despite documented failures: a $p$-value
-  cannot be converted into an effect size, cannot confirm a null, and is typically
-  applied to a summary outcome rather than the mechanism generating it. I propose
-  pairing an explicit causal graph with Bayesian estimation of a generative model
-  consistent with that graph as a general-purpose alternative, and demonstrate the
-  approach on a controlled experiment. Nandini et al. (2026) measured the functional
-  response of the invasive hydroid *Cordylophora caspia* feeding on three zooplankton
-  prey across three salinities, and concluded via two-way ANOVA that salinity had no
-  effect on feeding behavior -- a conclusion accurate for biomass consumed but
-  contradicted by their own numbers-consumed analysis, which found both a significant
-  salinity effect and a significant prey-by-salinity interaction. I reanalyze this
-  dataset with a causal-graph-consistent Bayesian model of the underlying Holling type
-  II functional response, with priors elicited from stated, literature-anchored claims
-  rather than from the data, and report posterior contrasts on attack rate and
-  handling time rather than significance decisions. Prey identity does not credibly
-  distinguish attack rate, but salinity does: attack rate is higher at 30 g/L than at
-  10 or 20 g/L, a direction I verify is stable across a wide range of prior choices
-  using power-scaling sensitivity analysis. Applying the same check to the
-  prey-by-salinity interaction does not yield an equally robust result: one prey
-  comparison is a stable non-finding and the other's apparent direction depends on a
-  prior choice looser than the one elicited from background knowledge, so I do not
-  report a confirmed interaction. A bounded-support alternative measurement model,
-  built to respect a physical constraint occasionally violated by the primary model's
-  prior predictive distribution, is compared by leave-one-out cross-validation and
-  found to fit the data less well. The result is a full reanalysis in which every
-  reported conclusion is stated as an effect size with a credible interval and checked
-  for prior sensitivity, reported honestly whether or not it survives that check --
-  illustrating a workflow intended to generalize beyond this study to observational
-  data, addressed in a subsequent paper.
+  Null-hypothesis significance testing remains the default inferential tool for treatment-effect questions in ecology, despite documented failures: a $p$-value cannot be converted into an effect size, cannot confirm a null, and is typically applied to a summary outcome rather than the mechanism generating it. I propose pairing an explicit causal graph with Bayesian estimation of a generative model consistent with that graph as a general-purpose alternative, and demonstrate the approach on a controlled experiment. Nandini et al. (2026) measured the functional response of the invasive hydroid *Cordylophora caspia* feeding on three zooplankton prey across three salinities, and concluded via two-way ANOVA that salinity had no effect on feeding behavior -- a conclusion accurate for biomass consumed but contradicted by their own numbers-consumed analysis, which found both a significant salinity effect and a significant prey-by-salinity interaction. I reanalyze this dataset with a causal-graph-consistent Bayesian model of the underlying Holling type II functional response, with priors elicited from stated literature-anchored claims rather than from the data, and report posterior contrasts on attack rate and handling time rather than significance decisions. Prey identity does not credibly distinguish attack rate, but salinity does: attack rate is higher at 30 g/L than at 10 or 20 g/L, a direction I verify is stable across a wide range of prior choices using power-scaling sensitivity analysis. Applying the same check to the
+  prey-by-salinity interaction does not yield an equally robust result: one prey comparison is a stable non-finding and the other's apparent direction depends on a prior choice looser than the one elicited from background knowledge, so I do not report a confirmed interaction. A bounded-support alternative measurement model, built to respect a physical constraint occasionally violated by the primary model's prior predictive distribution, is compared by leave-one-out cross-validation and found to fit the data less well. The result is a full reanalysis in which every reported conclusion is stated as an effect size with a credible interval and checked for prior sensitivity, reported honestly whether or not it survives that check -- illustrating a workflow intended to generalize beyond this study to observational data, addressed in a subsequent paper.
 
-keywords: [Effect estimation, functional response, causal inference, Bayesian measurement error]
-
-
+keywords: [Effect estimation, functional response, causal inference, Bayesian modeling]
 
 
 project:
