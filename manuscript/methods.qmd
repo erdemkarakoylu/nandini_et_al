@@ -4,6 +4,7 @@
 
 I reanalyze the @nandini2026 dataset described above. A single polyp (~1 week old) was offered each prey type at each of three salinity conditions (10, 20, and 30 $g\,L^{-1}$) across a graded series of prey densities, and allowed to feed for 2 h at $25^{\circ}C$. The response is the number of prey removed (initial minus final count); for this surplus-killing predator this represents prey killed rather than necessarily ingested. Each datum is the mean and standard error of removal across four replicates. Raw replicate counts were not available, so I condition on each cell mean and its standard error as the observed value and its known measurement scale (@sec-stat-mdl). Observations are indexed by prey type  $i \in \{1, 2, 3\}$, salinity $j \in \{1, 2, 3\}$, and density level $k$, with $N_{0,ijk}$ the offered density, $\bar{y}_{ijk}$ the mean of prey removed, and $se_{ijk}$ the standard error of prey removed.
 
+Because the data provided consisted of aggregated summary metrics (means and standard errors derived from $n = 4$ replicates per treatment group) rather than raw individual-level observations, models were implemented using group-level Gaussian likelihood approximations.
 
 ### Causal model
 

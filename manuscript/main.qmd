@@ -43,6 +43,9 @@ abstract: |
 
 keywords: [Effect estimation, functional response, causal inference, Bayesian measurement error]
 
+
+
+
 project:
   type: default
   output-dir: output
@@ -70,14 +73,23 @@ format:
     fontsize: 11pt
     fig-pos: "H"
     tbl-pos: "H"
+    include-before-body:
+      text: |
+        \noindent\textbf{Keywords:} Effect estimation, functional response, causal inference, Bayesian measurement error
+
+        \newpage
 
 bibliography: references.bib
 link-citations: true
 ---
 
-{{< include ./introduction.qmd >}}
+```{=latex}
+\newpage
+```
 
-{{< include ./methods.qmd >}}
+{{< include introduction.qmd >}}
+
+{{< include methods.qmd >}}
 
 {{< include results.qmd >}}
 
