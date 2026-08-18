@@ -170,6 +170,7 @@ track it closely (r = 0.9999) -- not an interchangeable substitute, and not what
 3. `01_prior_elicitation.ipynb` — no dependency on (1) or (2), and no dependency on
    any data file; can run any time.
 4. `02_sampling_and_inference.ipynb` — depends on (1)'s output and on `scripts/model.py`.
+   That said minimal modification could have the model using the digitized data from (2) instead of the original data from (1).
 
 To render the manuscript, run Quarto on `manuscript/main.qmd`. `supplementary.qmd` is
 not included by default; add `{{< include supplementary.qmd >}}` to `main.qmd` to
