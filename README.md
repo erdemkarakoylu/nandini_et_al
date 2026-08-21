@@ -159,6 +159,8 @@ track it closely (r = 0.9999) -- not an interchangeable substitute, and not what
 
 ## Reproducing this analysis
 
+
+0. Install conda and recreate the environment with `conda env create -f environment.yml`
 1. `00_raw_data_wrangle.ipynb` — must run first; produces the CSVs everything else
    depends on. **Requires `data/sent_data/dataset.xlsx`**, which is not included in
    this repository (see "Data availability and licensing" above) and must be obtained
